@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 Works Applications Co., Ltd.
+ * Copyright (c) 2022-2024 Works Applications Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,22 +27,25 @@ import org.apache.lucene.util.AttributeReflector
  * This is not a token-based attribute, so impl's clear/copyTo do nothing
  */
 class MorphemeConsumerAttributeImpl : AttributeImpl(), MorphemeConsumerAttribute {
-  private var instance: Any = Companion
+  private var instances: MutableList<Any> = mutableListOf()
+
   // does nothing
   override fun clear() {}
-
-  override fun reflectWith(reflector: AttributeReflector) {
-    reflector.reflect<MorphemeConsumerAttribute>("instance", instance.javaClass.name)
-  }
-
   override fun copyTo(target: AttributeImpl?) {}
 
-  override fun getCurrentConsumer(): Any = instance
-
-  override fun setCurrentConsumer(consumer: Any?) {
-    instance = consumer!!
+  override fun reflectWith(reflector: AttributeReflector) {
+    reflector.reflect<MorphemeConsumerAttribute>("instances", instances.map { it.javaClass.name })
   }
 
-  // need something to use as initial value of [instance] variable
-  private companion object
+  override fun getCurrentConsumers(): List<Any> = instances
+
+  override fun dropLastConsumer(consumer: Any?) {
+    if (!instances.isEmpty() && consumer === instances.last()) {
+      instances.removeLast()
+    }
+  }
+
+  override fun addConsumer(consumer: Any?) {
+    instances.add(consumer!!)
+  }
 }
