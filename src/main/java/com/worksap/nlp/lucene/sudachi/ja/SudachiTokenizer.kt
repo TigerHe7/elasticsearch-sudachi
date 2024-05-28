@@ -37,7 +37,8 @@ class SudachiTokenizer(
   private val offsetAtt = addAttribute<OffsetAttribute>()
   private val posIncAtt = addAttribute<PositionIncrementAttribute>()
   private val posLenAtt = addAttribute<PositionLengthAttribute>()
-  private val consumer = addAttribute<MorphemeConsumerAttribute> { it.currentConsumer = this }
+  private val consumer =
+      addAttribute<MorphemeConsumerAttribute> { it.updateCurrentConsumers(this, null) }
 
   init {
     addAttribute<SudachiAttribute> { it.dictionary = tokenizer.dictionary }
@@ -62,7 +63,9 @@ class SudachiTokenizer(
     posIncAtt.positionIncrement = 1
     val baseOffset = iterator.baseOffset
     offsetAtt.setOffset(correctOffset(baseOffset + m.begin()), correctOffset(baseOffset + m.end()))
-    termAtt.setEmpty().append(m.surface())
+    if (consumer.shouldConsume(this)) {
+      termAtt.setEmpty().append(m.surface())
+    }
     return true
   }
 

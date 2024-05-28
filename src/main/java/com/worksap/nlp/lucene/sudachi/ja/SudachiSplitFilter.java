@@ -86,7 +86,7 @@ public class SudachiSplitFilter extends TokenFilter {
     private final PositionIncrementAttribute posIncAtt;
     private final PositionLengthAttribute posLengthAtt;
     private final MorphemeAttribute morphemeAtt;
-    private final MorphemeConsumerAttribute consumerAttribute;
+    private final MorphemeConsumerAttribute consumerAtt;
     private ListIterator<Morpheme> aUnitIterator;
     private final OovChars oovChars = new OovChars();
 
@@ -102,8 +102,8 @@ public class SudachiSplitFilter extends TokenFilter {
         posIncAtt = addAttribute(PositionIncrementAttribute.class);
         posLengthAtt = addAttribute(PositionLengthAttribute.class);
         morphemeAtt = addAttribute(MorphemeAttribute.class);
-        consumerAttribute = addAttribute(MorphemeConsumerAttribute.class);
-        consumerAttribute.setCurrentConsumer(this);
+        consumerAtt = addAttribute(MorphemeConsumerAttribute.class);
+        consumerAtt.updateCurrentConsumers(this, input);
     }
 
     @Override
@@ -125,9 +125,12 @@ public class SudachiSplitFilter extends TokenFilter {
             if (m == null) {
                 return true;
             }
-            termAtt.setEmpty().append(m.surface());
-            if (mode == Mode.EXTENDED && m.isOOV() && (length = Strings.codepointCount(termAtt)) > 1) {
-                oovChars.setOov(offsetAtt.startOffset(), termAtt.buffer(), termAtt.length());
+            if (consumerAtt.shouldConsume(this)) {
+                termAtt.setEmpty().append(m.surface());
+            }
+            String surface = m.surface();
+            if (mode == Mode.EXTENDED && m.isOOV() && (length = Strings.codepointCount(surface)) > 1) {
+                oovChars.setOov(offsetAtt.startOffset(), surface.toCharArray(), surface.length());
                 posLengthAtt.setPositionLength(length);
             } else if (splitMode != Tokenizer.SplitMode.C) {
                 List<Morpheme> subUnits = m.split(splitMode);
@@ -156,7 +159,9 @@ public class SudachiSplitFilter extends TokenFilter {
         offsetAtt.setOffset(aUnitOffset, aUnitOffset + length);
         aUnitOffset += length;
         morphemeAtt.setMorpheme(morpheme);
-        termAtt.setEmpty().append(morpheme.surface());
+        if (consumerAtt.shouldConsume(this)) {
+            termAtt.setEmpty().append(morpheme.surface());
+        }
     }
 
     private void setOOVAttribute() {

@@ -40,7 +40,8 @@ abstract class MorphemeFieldFilter(input: TokenStream) : TokenFilter(input) {
   @JvmField protected val keywordAtt = addAttribute<KeywordAttribute>()
   @JvmField protected val termAtt = addAttribute<CharTermAttribute>()
   @JvmField
-  protected val consumer = addAttribute<MorphemeConsumerAttribute> { it.currentConsumer = this }
+  protected val consumer =
+      addAttribute<MorphemeConsumerAttribute> { it.updateCurrentConsumers(this, input) }
 
   /**
    * Override this method to customize returned value. This method will not be called if
@@ -54,14 +55,15 @@ abstract class MorphemeFieldFilter(input: TokenStream) : TokenFilter(input) {
     }
     val m = morphemeAtt.getMorpheme() ?: return true
     var term: CharSequence? = null
-    if (!keywordAtt.isKeyword) {
-      term = value(m)
+    if (consumer.shouldConsume(this)) {
+      if (!keywordAtt.isKeyword) {
+        term = value(m)
+      }
+      if (term == null) {
+        term = m.surface()
+      }
+      termAtt.setEmpty().append(term)
     }
-    if (term == null) {
-      term = m.surface()
-    }
-    termAtt.setEmpty().append(term)
-
     return true
   }
 
